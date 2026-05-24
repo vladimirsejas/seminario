@@ -1,7 +1,17 @@
 venv/
+
 __pycache__/
+
 *.pyc
+
 .env
 
-data/
 *.parquet
+
+*.xlsx
+
+.streamlit/
+
+.idea/
+
+.vscode/settings.json

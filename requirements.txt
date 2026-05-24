@@ -1,0 +1,6 @@
+duckdb
+pandas
+matplotlib
+streamlit
+scikit-learn
+openpyxl

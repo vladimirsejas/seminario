@@ -1,44 +1,31 @@
-from pysus.sinan import SINAN
+import logging
+from src.database import Database
+
+logger = logging.getLogger(__name__)
+
+COLUNAS_UTEIS = [
+    "DT_NOTIFIC",
+    "SG_UF_NOT",
+    "ID_MUNICIP",
+    "CS_SEXO",
+    "NU_IDADE_N",
+    "CS_GESTANT",
+    "CS_RACA",
+    "CLASSI_FIN",
+    "EVOLUCAO",
+    "HOSPITALIZ",
+    "DT_OBITO",
+    "MUNICIPIO",
+    "UF",
+]
 
 
 class EpidemiologyService:
 
-    def download_dengue_data(self):
+    def __init__(self):
+        self.database = Database()
+        self.path = "data/epidemiologia/DENGBR24.parquet"
 
-        try:
-
-            print("Conectando ao SINAN...")
-
-            sinan = SINAN()
-
-            print("Baixando dados da dengue...")
-
-            df = sinan.load()
-
-            print("Download concluído.")
-
-            return df
-
-        except Exception as error:
-
-            print(f"Erro: {error}")
-
-            return None
-
-
-if __name__ == "__main__":
-
-    service = EpidemiologyService()
-
-    df = service.download_dengue_data()
-
-    if df is not None:
-
-        print("\nPrimeiras linhas:")
-        print(df.head())
-
-        print("\nColunas:")
-        print(df.columns)
-
-        print("\nTotal de registros:")
-        print(len(df))
+    def load_data(self):
+        logger.info(f"Carregando {len(COLUNAS_UTEIS)} colunas do parquet...")
+        return self.database.read_parquet(self.path, columns=COLUNAS_UTEIS)

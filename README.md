@@ -1,17 +1,25 @@
-Sistema Inteligente de Mineração Epidemiológica da Dengue
-Utilizando Dados Oficiais do DATASUS/SINAN e Integração DICOM
+# Sistema Inteligente de Mineração Epidemiológica da Dengue
 
-Este projeto foi desenvolvido como uma aplicação acadêmica de engenharia de software, mineração de dados e ciência de dados em saúde pública utilizando Python. O sistema tem como objetivo demonstrar o uso integrado de bibliotecas reais do ecossistema científico para análise epidemiológica da dengue no Brasil utilizando dados oficiais do DATASUS/SINAN.
+## Utilizando Dados Oficiais do DATASUS/SINAN e Integração DICOM
 
-O foco principal do projeto não é realizar diagnóstico médico nem prever doenças com inteligência artificial clínica. O objetivo científico é identificar padrões epidemiológicos ocultos relacionados à sazonalidade, perfil demográfico, comportamento regional, distribuição socioeconômica e concentração territorial da dengue.
+Este projeto foi desenvolvido como uma aplicação acadêmica de engenharia de software, mineração de dados e ciência de dados em saúde pública utilizando Python.
+
+O sistema tem como objetivo demonstrar o uso integrado de bibliotecas reais do ecossistema científico para análise epidemiológica da dengue no Brasil utilizando dados oficiais do DATASUS/SINAN.
+
+O foco principal do projeto não é realizar diagnóstico médico nem prever doenças com inteligência artificial clínica.
+
+O objetivo científico é identificar padrões epidemiológicos ocultos relacionados à sazonalidade, perfil demográfico, comportamento regional, distribuição socioeconômica e concentração territorial da dengue.
 
 O sistema utiliza dados públicos reais do governo federal brasileiro através da biblioteca PySUS e integra técnicas de mineração de dados, análise estatística, clusterização e visualização analítica.
 
 A arquitetura foi construída de forma modular e separada por responsabilidades, permitindo expansão futura para novas pesquisas acadêmicas envolvendo saúde pública, mineração epidemiológica e ciência de dados.
 
-Objetivo Científico
+---
+
+# Objetivo Científico
 
 O projeto busca responder perguntas analíticas fundamentais como:
+
 Existem padrões epidemiológicos ocultos na distribuição da dengue no Brasil?
 
 Existem relações entre a incidência de dengue e o IDHM municipal?
@@ -24,49 +32,61 @@ Municípios de alto desenvolvimento humano apresentam maior concentração de ca
 
 Existem municípios considerados outliers epidemiológicos fora do padrão nacional?
 
-Tecnologias Utilizadas
-Python 3.11
+---
+
+# Tecnologias Utilizadas
+
+## Python 3.11
+
 Linguagem principal utilizada no desenvolvimento do sistema.
 
-PySUS
+## PySUS
 
 Biblioteca utilizada para acesso, download e estruturação dos dados epidemiológicos oficiais do DATASUS e SINAN.
-Pandas
+
+## pandas
+
 Manipulação tabular de DataFrames, cruzamento de bases, agrupamentos, filtros e análises estatísticas.
 
-DuckDB
+## DuckDB
 
 Banco analítico utilizado para leitura extremamente rápida de arquivos Parquet sem necessidade de carregar toda a base na memória RAM.
 
-matplotlib
+## matplotlib
 
 Biblioteca utilizada para geração de gráficos científicos e visualizações epidemiológicas.
 
-Streamlit
+## Streamlit
 
 Framework utilizado para construção do dashboard interativo local.
 
-scikit-learn
+## scikit-learn
 
 Biblioteca utilizada para mineração de dados, clusterização e identificação de padrões utilizando KMeans.
 
-openpyxl
+## openpyxl
 
 Leitura de planilhas Excel contendo indicadores socioeconômicos municipais.
 
-pydicom
+## pydicom
 
 Biblioteca prevista para integração futura com imagens médicas no padrão DICOM.
 
-sqlite3
+## sqlite3
 
 Persistência local de dados estruturados e histórico de execução.
 
-logging
+## logging
 
 Sistema de monitoramento e rastreamento de erros durante a execução do pipeline.
 
-Estrutura Real do Projeto
+---
+
+# Estrutura Real do Projeto
+
+# Estrutura Real do Projeto
+
+```text
 seminario/
 
 ├── main.py
@@ -93,135 +113,151 @@ seminario/
 │   └── risk_engine.py
 │
 └── venv/
-Explicação dos Arquivos
+```
 
-main.py
+---
+
+# Explicação dos Arquivos
+
+## main.py
 
 Arquivo principal responsável pela orquestração do pipeline epidemiológico e integração entre os módulos centrais do sistema.
 
-baixar_idh.py
+## baixar_idh.py
 
 Responsável pelo download e preparação inicial dos dados municipais de IDHM utilizados no cruzamento socioeconômico.
 
-cruzar_idh.py
+## cruzar_idh.py
 
 Realiza o cruzamento entre os casos de dengue e os indicadores de desenvolvimento humano municipal utilizando códigos IBGE.
 
-diagnostico.py
+## diagnostico.py
 
 Arquivo utilizado para inspeção, validação e diagnóstico das colunas presentes nas bases epidemiológicas.
 
-gerar_base_reduzida.py
+## gerar_base_reduzida.py
 
 Cria uma base reduzida focada na população economicamente ativa entre 18 e 61 anos para otimizar as análises.
 
-dashboard.py
+## dashboard.py
 
 Implementa o dashboard interativo utilizando Streamlit contendo tabelas, métricas, clusterização, sazonalidade e análise epidemiológica.
 
-graphs.py
+## graphs.py
 
-Responsável pela geração dos gráficos científicos e exportação das visualizações para a pasta data/graficos.
+Responsável pela geração dos gráficos científicos e exportação das visualizações para a pasta `data/graficos`.
 
-teste_pysus.py
+## teste_pysus.py
 
 Arquivo inicial de validação do funcionamento da biblioteca PySUS.
 
-testes_dados.py
+## testes_dados.py
 
 Executa verificações estruturais das bases Parquet e validação de colunas.
 
-src/database.py
+## src/database.py
 
 Implementa consultas analíticas utilizando DuckDB para leitura eficiente dos arquivos Parquet.
 
-src/epidemiology_service.py
+## src/epidemiology_service.py
 
 Responsável pelo carregamento e processamento dos dados epidemiológicos oriundos do SINAN/DATASUS.
 
-src/risk_engine.py
+## src/risk_engine.py
 
 Motor analítico do sistema responsável por agrupamentos, estatísticas, classificação epidemiológica, sazonalidade, distribuição demográfica e identificação de padrões.
 
-Estrutura de Dados
+---
+
+# Estrutura de Dados
 
 O sistema trabalha principalmente com arquivos no formato Parquet.
 
 O formato Parquet foi escolhido porque:
 
-possui alta compressão
+Alta compressão de dados.
 
-permite leitura extremamente rápida
+Leitura extremamente rápida.
 
-consome menos memória RAM
+Baixo consumo de memória RAM.
 
-funciona muito bem com DuckDB
+Excelente integração com DuckDB.
 
-é amplamente utilizado em engenharia de dados e Big Data
+Ampla utilização em engenharia de dados e Big Data.
 
-Bases Utilizadas
+---
 
-DENGBR24.parquet
+# Bases Utilizadas
+
+## DENGBR24.parquet
 
 Base completa contendo notificações nacionais de dengue referentes ao ano de 2024.
 
-DENG_PEA.parquet
+## DENG_PEA.parquet
 
 Base reduzida contendo apenas indivíduos pertencentes à população economicamente ativa entre 18 e 61 anos.
 
-idhm_municipios.parquet
+## idhm_municipios.parquet
 
 Base contendo indicadores municipais de IDHM utilizados nas análises socioeconômicas.
 
-Dashboard Analítico
+---
+
+# Dashboard Analítico
 
 O dashboard desenvolvido em Streamlit permite:
 
-visualização de sazonalidade
+Visualização de sazonalidade.
 
-análise por faixa de IDH
+Análise por faixa de IDH.
 
-distribuição por sexo
+Distribuição por sexo.
 
-análise por faixa etária
+Análise por faixa etária.
 
-clusterização de municípios
+Clusterização de municípios.
 
-detecção de outliers epidemiológicos
+Detecção de outliers epidemiológicos.
 
-análise territorial
+Análise territorial.
 
-ranking de municípios
+Ranking de municípios.
 
-métricas epidemiológicas agregadas
+Métricas epidemiológicas agregadas.
 
-Clusterização
+---
+
+# Clusterização
 
 O projeto utiliza o algoritmo KMeans da biblioteca scikit-learn para identificar grupos ocultos de municípios com comportamento epidemiológico semelhante.
 
 As variáveis utilizadas incluem:
 
-número de casos
+Número de casos.
 
-IDHM municipal
+IDHM municipal.
 
-idade média
+Idade média.
 
-distribuição demográfica
+Distribuição demográfica.
 
-Integração Socioeconômica
+---
+
+# Integração Socioeconômica
 
 O sistema realiza cruzamento entre:
 
-casos de dengue
+Casos de dengue.
 
-IDHM municipal
+IDHM municipal.
 
-códigos IBGE
+Códigos IBGE.
 
 Esse cruzamento permite análises epidemiológicas associadas ao desenvolvimento humano, urbanização e desigualdade regional.
 
-Integração DICOM
+---
+
+# Integração DICOM
 
 A integração DICOM foi mantida como camada experimental complementar.
 
@@ -229,107 +265,121 @@ O objetivo não é realizar diagnóstico médico automatizado.
 
 O papel do DICOM no projeto é:
 
-demonstrar integração tecnológica
+Demonstrar integração tecnológica.
 
-extrair metadados clínicos
+Extrair metadados clínicos.
 
-contextualizar análises hospitalares
+Contextualizar análises hospitalares.
 
-servir como prova de integração com imagens médicas
+Servir como prova de integração com imagens médicas.
 
-Sobre o .gitignore
+---
 
-O arquivo .gitignore impede que arquivos desnecessários sejam enviados ao GitHub.
+# Sobre o .gitignore
 
-Foram ignorados:
+O arquivo `.gitignore` impede que arquivos desnecessários sejam enviados ao GitHub.
 
-venv/
+Arquivos ignorados:
+
+## venv/
 
 Ambiente virtual local do Python.
 
-pycache/
+## __pycache__/
 
 Arquivos temporários gerados automaticamente pelo interpretador Python.
 
-*.pyc
+## *.pyc
 
 Arquivos compilados temporários.
 
-.env
+## .env
 
 Variáveis de ambiente locais.
 
-*.parquet
+## *.parquet
 
 Bases de dados grandes que não devem ser enviadas ao repositório.
 
-Sobre o requirements.txt
+---
 
-O arquivo requirements.txt lista todas as bibliotecas necessárias para execução do projeto.
+# Sobre o requirements.txt
+
+O arquivo `requirements.txt` lista todas as bibliotecas necessárias para execução do projeto.
 
 Bibliotecas utilizadas:
 
+```txt
 duckdb
-
 pandas
-
 matplotlib
-
 streamlit
-
 scikit-learn
-
 openpyxl
-
 pysus
-
 pydicom
+```
 
-Como Executar
+---
 
-Criar ambiente virtual:
+# Como Executar
 
+## Criar ambiente virtual
+
+```bash
 python -m venv venv
+```
 
-Ativar ambiente virtual:
+## Ativar ambiente virtual
 
+```bash
 venv\Scripts\activate
+```
 
-Instalar dependências:
+## Instalar dependências
 
+```bash
 pip install -r requirements.txt
+```
 
-Executar dashboard:
+## Executar dashboard
 
+```bash
 streamlit run dashboard.py
+```
 
-Executar pipeline principal:
+## Executar pipeline principal
 
+```bash
 python main.py
-Considerações Acadêmicas
+```
+
+---
+
+# Considerações Acadêmicas
 
 Este projeto demonstra na prática:
 
-engenharia de software modular
+Engenharia de software modular.
 
-consumo de dados públicos brasileiros
+Consumo de dados públicos brasileiros.
 
-mineração de dados em saúde pública
+Mineração de dados em saúde pública.
 
-visualização científica
+Visualização científica.
 
-engenharia de dados
+Engenharia de dados.
 
-clusterização
+Clusterização.
 
-análise epidemiológica
+Análise epidemiológica.
 
-uso de parquet e DuckDB
+Uso de Parquet e DuckDB.
 
-integração de bibliotecas científicas reais
+Integração de bibliotecas científicas reais.
 
-construção de dashboard analítico
+Construção de dashboard analítico.
 
-tratamento estatístico de dados reais
+Tratamento estatístico de dados reais.
 
-arquitetura escalável para futuras pesquisas acadêmicas
+Arquitetura escalável para futuras pesquisas acadêmicas.

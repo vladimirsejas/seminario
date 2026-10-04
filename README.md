@@ -112,34 +112,21 @@ o **DuckDB** faz exatamente as mesmas consultas nos arquivos Parquet, e o **Stre
 | Abrir só o dashboard original | `Abrir Dashboard.bat` | `localhost:8501` |
 | Abrir o dashboard show | `Abrir Dashboard Show.bat` | `localhost:8502` |
 
-- Os dois dashboards podem ficar **abertos ao mesmo tempo**, em abas diferentes: ótimo para mostrar o antes
-  e o depois lado a lado.
+- Os dois dashboards podem ficar **abertos ao mesmo tempo**, em abas diferentes.
 - Na primeira vez, o `Abrir Dashboard Show.bat` instala o Plotly sozinho (precisa de internet).
 - Para encerrar um dashboard, feche a janela preta (ou o terminal) que o mantém aberto.
 - **Não use o ▶ no `dashboard.py` nem no `dashboard_show.py`:** um dashboard Streamlit precisa ser aberto pelo
   Streamlit, por isso existem os atalhos.
 
-### Sobre a segurança do Windows neste computador
+### Sobre a segurança do Windows
 
-- O Windows bloqueia o programa `streamlit.exe` (aviso do *Device Guard* / *Controle de Aplicativo
+- Em computadores com essa proteção ligada, o Windows bloqueia o programa `streamlit.exe` (aviso do *Device Guard* / *Controle de Aplicativo
   Inteligente*). Por isso os atalhos e o `main.py` abrem o Streamlit **pelo `python.exe`**
   (`python -m streamlit run ...`), que é permitido.
 - Um `.bat` **baixado da internet** pode ser bloqueado. Os atalhos chegam pelo `git pull`, que não tem esse
   problema. Se precisar usar um baixado: botão direito → Propriedades → ☑ Desbloquear.
 - Não é recomendado desligar o Controle de Aplicativo Inteligente: depois de desligado, ele só volta
   reinstalando o Windows.
-
----
-
-## Roteiro sugerido para a apresentação
-
-1. Abra o **original** (`Abrir Dashboard.bat`) e mostre o trabalho como foi feito.
-2. Abra o **show** (`Abrir Dashboard Show.bat`) em outra aba: "os mesmos dados, outra forma de ver".
-3. Deixe a **constelação** respirar alguns segundos e depois use o mouse para investigar uma cidade.
-4. Mostre a **lupa** nos gráficos da Visão Geral.
-5. Na aba **Clustering**, aperte **▶ Executar agrupamento**: "eu não disse ao algoritmo onde estavam os grupos".
-6. Na aba **Outliers**, aperte **🔎 Encontrar anomalias**: dados → padrão → exceção.
-7. Se quiser repetir o impacto inicial, use **🎬 Reproduzir abertura**.
 
 ---
 

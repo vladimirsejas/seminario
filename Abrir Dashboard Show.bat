@@ -1,36 +1,30 @@
 @echo off
-title Seminario - Dashboard Dengue
+title Dashboard Show - Seminario Dengue
 cd /d "%~dp0"
 
 echo.
 echo ==========================================
-echo    DASHBOARD - SEMINARIO DENGUE
+echo    DASHBOARD SHOW - SEMINARIO DENGUE
 echo ==========================================
 echo.
 
-REM Primeiro tenta o Python Launcher do Windows
-where py >nul 2>&1
-if %errorlevel%==0 (
-    echo Iniciando com Python Launcher...
-    py -m streamlit run dashboard.py
-    if not errorlevel 1 goto fim
+if not exist "venv\Scripts\python.exe" (
+    echo Nao encontrei a pasta venv aqui.
+    echo Este atalho precisa ficar dentro da pasta do seminario, junto do dashboard_show.py.
+    pause
+    exit /b 1
 )
 
-REM Se nao funcionar, tenta o Python da venv
-if exist "venv\Scripts\python.exe" (
-    echo.
-    echo Iniciando com Python da venv...
-    "venv\Scripts\python.exe" -m streamlit run dashboard.py
-    goto fim
+rem Na primeira vez, instala o Plotly, que deixa os graficos interativos
+venv\Scripts\python.exe -c "import plotly" 2>nul
+if errorlevel 1 (
+    echo Primeira vez: instalando o Plotly. Precisa de internet...
+    venv\Scripts\python.exe -m pip install -r requirements_show.txt
 )
 
+echo Abrindo o dashboard show no navegador...
+echo Para encerrar, feche esta janela.
 echo.
-echo ERRO: nao encontrei um Python capaz de iniciar o dashboard.
-echo.
-echo Verifique se o Python e o Streamlit estao instalados.
-echo.
-pause
-goto fim
-
-:fim
+rem Usa o Python da venv e abre o dashboard_show.py, a versao com movimento
+venv\Scripts\python.exe -m streamlit run dashboard_show.py --theme.base light
 pause

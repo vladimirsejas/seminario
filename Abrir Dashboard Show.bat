@@ -22,9 +22,10 @@ if errorlevel 1 (
     venv\Scripts\python.exe -m pip install -r requirements_show.txt
 )
 
-echo Abrindo o dashboard show no navegador...
+echo Abrindo o dashboard show no navegador: http://localhost:8502
+echo (o dashboard original, sem movimento, fica em http://localhost:8501)
 echo Para encerrar, feche esta janela.
 echo.
 rem Usa o Python da venv e abre o dashboard_show.py, a versao com movimento
-venv\Scripts\python.exe -m streamlit run dashboard_show.py --theme.base light
+venv\Scripts\python.exe -m streamlit run dashboard_show.py --theme.base light --server.port 8502
 pause

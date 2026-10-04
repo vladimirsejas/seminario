@@ -16,6 +16,164 @@ A arquitetura foi construída de forma modular e separada por responsabilidades,
 
 ---
 
+# Duas formas de ver o dashboard: o antes e o depois
+
+Este projeto tem **duas versões do dashboard**, lado a lado, para mostrar a evolução:
+
+1. **O antes (versão 1): `dashboard.py`.** O dashboard original, com gráficos científicos
+   em matplotlib. Continua **exatamente como foi feito**.
+2. **O depois (versão 2): `dashboard_show.py`.** Os **mesmos dados e as mesmas consultas**,
+   apresentados com movimento, interação e narrativa.
+
+Nenhum arquivo do projeto original foi apagado. A versão 2 só **acrescenta** arquivos novos.
+
+| | Versão 1: `dashboard.py` | Versão 2: `dashboard_show.py` |
+|---|---|---|
+| **Como abrir** | `Abrir Dashboard.bat` ou ▶ no `main.py` | `Abrir Dashboard Show.bat` |
+| **Endereço** | `localhost:8501` | `localhost:8502` |
+| **Nome da aba** | Dengue & IDH | Dengue & IDH \| Show |
+| **Gráficos** | Imagens fixas (matplotlib) | Interativos (Plotly e desenho no navegador) |
+| **Abertura** | Tudo aparece pronto | Os números contam, as barras crescem e a linha se desenha |
+| **Narrativa** | Métricas e gráficos | Pergunta → Método → Resultado, "O que encontramos?" e letreiro de achados |
+| **Visão geral** | — | **Constelação viva** com os 5.210 municípios |
+| **Detalhes** | — | **Lupa** que amplia os gráficos e mostra fichas completas |
+| **Clustering** | O resultado pronto | O K-Means roda **passo a passo** na frente da turma |
+| **Outliers** | Tabelas | Efeito **detetive**: o limite aparece e as anomalias acendem |
+| **Visual** | Padrão do Streamlit | Título colorido em movimento, mosquito voando, pontos de luz |
+
+Os números são os mesmos nas duas versões, porque as duas leem os mesmos arquivos com as mesmas consultas.
+
+---
+
+## O que há de novo na versão 2, parte por parte
+
+**Cabeçalho.** Título com cores que se movem, um 🦟 voando, o indicador "● AO VIVO" e o botão
+**🎬 Reproduzir abertura**, que repete toda a animação de abertura quando você quiser.
+
+**Os quatro números.** Contam do zero até o valor final, no formato brasileiro (4.412.090 e 84,8%),
+com uma borda que "respira".
+
+**🌌 Constelação viva.** Cada município é um ponto de luz: a posição vem do IDHM e dos casos, e a cor,
+da faixa de IDH. Um relógio percorre o ano (JAN → DEZ) e os pontos **crescem com os casos de cada mês**,
+seguindo a sazonalidade real. Anéis marcam surtos nas cidades com mais casos. O mouse vira uma lente
+que mostra a cidade, os casos e o IDHM; sem mouse, a lente passeia sozinha.
+
+**Pergunta → Método → Resultado.** Três cartões que explicam o trabalho em uma frase cada, mais o quadro
+**"O que encontramos?"** e um letreiro com os principais achados.
+
+**🔍 Lupas nos gráficos.** Uma lente de aumento de verdade (amplia o que está embaixo dela) com um cartão
+de informações. Sem mouse, ela passeia sozinha pelas barras e pelos meses.
+- *Casos por faixa de IDH:* casos, % do total, nº de municípios, média por município, IDHM médio,
+  % de mulheres, idade média e as 3 cidades com mais casos.
+- *Sazonalidade:* total do mês, casos de cada faixa, variação em relação ao mês anterior, % do ano e
+  posição do mês no ranking.
+- *Top municípios:* posição no Brasil, casos, % dentro da faixa, IDHM, % de mulheres e idade média.
+
+**🔬 Clustering.** O botão **▶ Executar agrupamento** mostra o K-Means trabalhando: os centros (✖) se movem
+e as cores se reorganizam a cada passo, até o algoritmo parar. No fim, uma tabela descreve cada grupo
+em português (por exemplo, "IDH alto · mais casos").
+
+**⚠️ Outliers.** O botão **🔎 Encontrar anomalias** traça o limite do padrão (Z-score > 2) e revela, aos poucos,
+os municípios que fogem dele, com os nomes dos maiores.
+
+---
+
+## As novas bibliotecas e tecnologias da versão 2
+
+| Biblioteca / tecnologia | Precisa instalar? | Função no dashboard show |
+|---|---|---|
+| **Plotly** | Sim, uma vez (`requirements_show.txt`) | Gráficos interativos do clustering e dos outliers: passar o mouse, aproximar e animar cada passo |
+| **streamlit.components** | Não (já vem no Streamlit) | Permite colocar dentro do dashboard páginas com desenho próprio (a constelação e as lupas) |
+| **HTML5 Canvas + JavaScript** | Não (roda no próprio navegador) | Desenha a constelação e as lupas dezenas de vezes por segundo, reagindo ao mouse, **sem internet** |
+| **CSS (animações)** | Não | O título colorido em movimento, o mosquito voando, o letreiro, o "AO VIVO" e os pontos de luz do fundo |
+| **scikit-learn** (`kmeans_plusplus`) | Não (já estava no projeto) | Escolhe os centros iniciais do K-Means; os passos seguintes são calculados um a um para a animação |
+| **NumPy** | Não (vem junto com o pandas) | Calcula as distâncias entre os municípios e os centros dos grupos em cada passo do K-Means |
+
+As bibliotecas da versão 1 (DuckDB, pandas, Streamlit, scikit-learn, matplotlib) continuam sendo usadas:
+o **DuckDB** faz exatamente as mesmas consultas nos arquivos Parquet, e o **Streamlit** monta a página.
+
+### Como cada novidade funciona, em uma frase
+
+- **Números que contam:** o Python atualiza o valor dezenas de vezes em menos de dois segundos.
+- **Constelação e lupas:** o Python prepara os dados e os entrega ao navegador, que desenha tudo sozinho,
+  quadro a quadro.
+- **K-Means passo a passo:** em vez de pedir só o resultado final, o dashboard guarda cada etapa do
+  algoritmo (escolher centros → agrupar → mover os centros → repetir) e mostra uma por uma.
+- **Outliers:** o Z-score mede quantos desvios-padrão um município está acima da média; acima de 2, ele
+  está fora do padrão.
+
+---
+
+## Como abrir (Windows)
+
+| Para... | Use | Endereço |
+|---|---|---|
+| Gerar os gráficos e abrir o dashboard original | ▶ no `main.py` (VS Code) | `localhost:8501` |
+| Abrir só o dashboard original | `Abrir Dashboard.bat` | `localhost:8501` |
+| Abrir o dashboard show | `Abrir Dashboard Show.bat` | `localhost:8502` |
+
+- Os dois dashboards podem ficar **abertos ao mesmo tempo**, em abas diferentes: ótimo para mostrar o antes
+  e o depois lado a lado.
+- Na primeira vez, o `Abrir Dashboard Show.bat` instala o Plotly sozinho (precisa de internet).
+- Para encerrar um dashboard, feche a janela preta (ou o terminal) que o mantém aberto.
+- **Não use o ▶ no `dashboard.py` nem no `dashboard_show.py`:** um dashboard Streamlit precisa ser aberto pelo
+  Streamlit, por isso existem os atalhos.
+
+### Sobre a segurança do Windows neste computador
+
+- O Windows bloqueia o programa `streamlit.exe` (aviso do *Device Guard* / *Controle de Aplicativo
+  Inteligente*). Por isso os atalhos e o `main.py` abrem o Streamlit **pelo `python.exe`**
+  (`python -m streamlit run ...`), que é permitido.
+- Um `.bat` **baixado da internet** pode ser bloqueado. Os atalhos chegam pelo `git pull`, que não tem esse
+  problema. Se precisar usar um baixado: botão direito → Propriedades → ☑ Desbloquear.
+- Não é recomendado desligar o Controle de Aplicativo Inteligente: depois de desligado, ele só volta
+  reinstalando o Windows.
+
+---
+
+## Roteiro sugerido para a apresentação
+
+1. Abra o **original** (`Abrir Dashboard.bat`) e mostre o trabalho como foi feito.
+2. Abra o **show** (`Abrir Dashboard Show.bat`) em outra aba: "os mesmos dados, outra forma de ver".
+3. Deixe a **constelação** respirar alguns segundos e depois use o mouse para investigar uma cidade.
+4. Mostre a **lupa** nos gráficos da Visão Geral.
+5. Na aba **Clustering**, aperte **▶ Executar agrupamento**: "eu não disse ao algoritmo onde estavam os grupos".
+6. Na aba **Outliers**, aperte **🔎 Encontrar anomalias**: dados → padrão → exceção.
+7. Se quiser repetir o impacto inicial, use **🎬 Reproduzir abertura**.
+
+---
+
+## Um cuidado científico
+
+Os números são **casos absolutos**. Municípios de IDH alto costumam ser os mais populosos, então
+concentram mais casos também por terem mais gente. Por isso o dashboard diz que os casos **se concentram**
+em municípios de IDH alto, sem afirmar que o IDH causa mais dengue. Para comparar o **risco**, o ideal é a
+**taxa por 100 mil habitantes**, que depende de dados de população.
+
+---
+
+## Arquivos acrescentados pela versão 2
+
+```text
+seminario/
+├── dashboard_show.py          ← o dashboard com movimento (versão 2)
+├── requirements_show.txt      ← só o Plotly
+├── Abrir Dashboard Show.bat   ← abre a versão 2 em localhost:8502
+├── Abrir Dashboard.bat        ← abre a versão 1 em localhost:8501
+└── .gitattributes             ← mantém os .bat no formato do Windows
+```
+
+O `main.py` recebeu uma única mudança: a última linha abre o dashboard pelo `python.exe` (veja acima, em
+segurança do Windows). Todo o resto do projeto original está como foi feito.
+
+---
+
+# Documentação do projeto original (versão 1)
+
+A partir daqui, a documentação original do projeto, sem alterações.
+
+---
+
 # Objetivo Científico
 
 O projeto busca responder perguntas analíticas fundamentais como:

@@ -37,7 +37,7 @@ Nenhum arquivo do projeto original foi apagado. A versão 2 só **acrescenta** a
 | **Narrativa** | Métricas e gráficos | Pergunta → Método → Resultado, "O que encontramos?" e letreiro de achados |
 | **Visão geral** | — | **Constelação viva** com os 5.210 municípios |
 | **Detalhes** | — | **Lupa** que amplia os gráficos e mostra fichas completas |
-| **Clustering** | O resultado pronto | O K-Means roda **passo a passo** na frente da turma |
+| **Clustering** | O resultado pronto | O K-Means roda **passo a passo** na tela |
 | **Outliers** | Tabelas | Efeito **detetive**: o limite aparece e as anomalias acendem |
 | **Visual** | Padrão do Streamlit | Título colorido em movimento, mosquito voando, pontos de luz |
 

@@ -9,7 +9,8 @@ Mesmos dados e mesmas consultas do original. Muda a apresentacao:
   - o K-Means roda passo a passo na frente da turma;
   - os outliers aparecem com efeito "detetive";
   - vida o tempo todo: pontos de luz no fundo, um mosquito voando, letreiro de achados;
-  - abertura animada (barras crescem, linha se desenha) e o botao "Reproduzir abertura".
+  - abertura animada (barras crescem, linha se desenha) e o botao "Reproduzir abertura";
+  - a constelacao viva: cada municipio e um ponto que respira com a sazonalidade real.
 
 Abrir: dois cliques em "Abrir Dashboard Show.bat"
 """
@@ -195,6 +196,149 @@ for lugar, (rotulo, valor, formato) in zip(lugares, NUMEROS):
     lugar.metric(rotulo, formato(valor if ja_contou else 0))
 
 st.divider()
+
+# ── A CONSTELACAO VIVA (desenhada no navegador, sem internet) ──
+CONSTELACAO_HTML = """
+<div id="caixa" style="position:relative;border-radius:18px;overflow:hidden;
+     background:radial-gradient(ellipse at 30% 20%,#ffffff 0%,#eef6fc 55%,#e3eef8 100%);
+     box-shadow:0 10px 30px rgba(41,128,185,.18);font-family:'Source Sans Pro',sans-serif">
+  <canvas id="tela" style="display:block;width:100%;height:__ALTURA__px"></canvas>
+</div>
+<script>
+const D = __DADOS__;
+const cv = document.getElementById('tela'), ctx = cv.getContext('2d');
+let W = 0, H = __ALTURA__, dpr = Math.min(window.devicePixelRatio || 1, 2);
+function medir() { W = cv.clientWidth; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+medir(); window.addEventListener('resize', medir);
+
+const M = {l: 70, r: 40, t: 70, b: 92};
+const [i0, i1] = [Math.min(...D.idhm) - 0.01, Math.max(...D.idhm) + 0.01];
+const lc = D.casos.map(c => Math.log10(Math.max(c, 1)));
+const [c0, c1] = [Math.min(...lc), Math.max(...lc) + 0.15];
+const cmax = Math.max(...D.casos);
+const pontos = D.idhm.map((v, k) => ({
+  u: (v - i0) / (i1 - i0), w: (lc[k] - c0) / (c1 - c0), f: D.faixa[k], c: D.casos[k], n: D.nome[k],
+  r: 2.0 + 4.0 * Math.sqrt(D.casos[k] / cmax), fase: Math.random() * 6.28, ativ: 0, x: 0, y: 0}));
+const surtos = pontos.map((p, k) => k).sort((a, b) => pontos[b].c - pontos[a].c).slice(0, 60);
+const aneis = [];
+let mouse = null, tempoMouse = -99;
+cv.addEventListener('mousemove', e => { const b = cv.getBoundingClientRect(); mouse = {x: e.clientX - b.left, y: e.clientY - b.top}; tempoMouse = performance.now() / 1000; });
+cv.addEventListener('mouseleave', () => { mouse = null; });
+
+function rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+function fmt(n) { return Math.round(n).toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); }
+let ultimoSurto = 0;
+
+function quadro(ms) {
+  const t = ms / 1000;
+  ctx.clearRect(0, 0, W, H);
+  // o relogio do ano: 1,4 s por mes, sem parar
+  const pos = (t / 1.4) % D.meses.length, m = Math.floor(pos), frac = pos - m, m2 = (m + 1) % D.meses.length;
+  const forca = D.series.map(s => s[m] * (1 - frac) + s[m2] * frac);
+  // a lente: o mouse, ou passeando sozinha quando o mouse nao esta no painel
+  const autoLente = !mouse || t - tempoMouse > 6;
+  const lente = autoLente ? {x: M.l + (W - M.l - M.r) * (0.5 + 0.42 * Math.sin(t * 0.23)),
+                             y: M.t + (H - M.t - M.b) * (0.45 + 0.35 * Math.sin(t * 0.37 + 1))} : mouse;
+  const R = 105;
+  // eixos discretos
+  ctx.strokeStyle = 'rgba(27,79,114,.18)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(M.l, H - M.b); ctx.lineTo(W - M.r, H - M.b); ctx.moveTo(M.l, M.t - 10); ctx.lineTo(M.l, H - M.b); ctx.stroke();
+  ctx.fillStyle = 'rgba(27,79,114,.55)'; ctx.font = '13px sans-serif';
+  ctx.fillText('IDHM →', W - M.r - 52, H - M.b + 20); ctx.save(); ctx.translate(M.l - 18, M.t + 120); ctx.rotate(-Math.PI / 2); ctx.fillText('casos (escala log) →', 0, 0); ctx.restore();
+  // os pontos
+  const perto = [];
+  for (const p of pontos) {
+    p.x = M.l + p.u * (W - M.l - M.r) + Math.sin(t * 0.6 + p.fase) * 1.6;
+    p.y = H - M.b - p.w * (H - M.t - M.b) + Math.cos(t * 0.5 + p.fase) * 1.6;
+    const d = Math.hypot(p.x - lente.x, p.y - lente.y);
+    const alvo = d < R ? 1 - d / R : 0;
+    p.ativ += (alvo - p.ativ) * 0.12;                         // acende e apaga devagar
+    if (d < R) perto.push([d, p]);
+    const pulso = 0.7 + 1.1 * forca[p.f];                    // a sazonalidade real fazendo o ponto respirar
+    const raio = p.r * pulso * (1 + 1.6 * p.ativ) + 0.4 * Math.sin(t * 2 + p.fase);
+    ctx.fillStyle = rgba(D.cores[p.f], 0.42 + 0.4 * forca[p.f] + 0.18 * p.ativ);
+    ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(raio, 0.8), 0, 6.283); ctx.fill();
+  }
+  // surtos: aneis que se expandem a partir das cidades com mais casos
+  if (t - ultimoSurto > 1.6) {
+    ultimoSurto = t; const p = pontos[surtos[Math.floor(Math.random() * surtos.length)]];
+    aneis.push({p, t0: t});
+  }
+  for (let k = aneis.length - 1; k >= 0; k--) {
+    const a = aneis[k], idade = t - a.t0; if (idade > 2.2) { aneis.splice(k, 1); continue; }
+    ctx.strokeStyle = rgba(D.cores[a.p.f], 0.7 * (1 - idade / 2.2)); ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(a.p.x, a.p.y, 6 + idade * 38, 0, 6.283); ctx.stroke();
+  }
+  // a lente: anel, linhas ate os vizinhos e a etiqueta do municipio mais proximo
+  perto.sort((a, b) => a[0] - b[0]);
+  ctx.strokeStyle = 'rgba(41,128,185,.55)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(lente.x, lente.y, R, 0, 6.283); ctx.stroke();
+  ctx.strokeStyle = 'rgba(41,128,185,.28)'; ctx.lineWidth = 1;
+  for (const [, p] of perto.slice(0, 10)) { ctx.beginPath(); ctx.moveTo(lente.x, lente.y); ctx.lineTo(p.x, p.y); ctx.stroke(); }
+  if (perto.length) {
+    const p = perto.reduce((a, b) => (b[1].c > a[1].c ? b : a))[1];      // o de mais casos dentro da lente
+    const txt = `${p.n}  ·  ${fmt(p.c)} casos  ·  IDHM ${D.idhmTxt[pontos.indexOf(p)]}`;
+    ctx.font = 'bold 14px sans-serif'; const lw = ctx.measureText(txt).width + 22;
+    const bx = Math.min(Math.max(p.x - lw / 2, 8), W - lw - 8), by = Math.max(p.y - 46, 8);
+    ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.strokeStyle = rgba(D.cores[p.f], .9); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(bx, by, lw, 28, 9); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#1b2631'; ctx.fillText(txt, bx + 11, by + 19);
+    ctx.strokeStyle = rgba(D.cores[p.f], .9); ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, 6.283); ctx.stroke();
+  }
+  // titulo e o relogio do ano
+  ctx.fillStyle = '#1b4f72'; ctx.font = 'bold 20px sans-serif';
+  ctx.fillText(`Os ${fmt(pontos.length)} municípios, ao vivo`, 22, 34);
+  ctx.fillStyle = 'rgba(27,79,114,.65)'; ctx.font = '14px sans-serif';
+  ctx.fillText(autoLente ? 'passe o mouse para investigar uma cidade' : 'investigando...', 22, 54);
+  ctx.textAlign = 'right'; ctx.fillStyle = rgba('#C0392B', 0.85); ctx.font = 'bold 44px sans-serif';
+  ctx.fillText(D.nomesMeses[m].toUpperCase(), W - 30, 52); ctx.textAlign = 'left';
+  const bx0 = M.l, bw = W - M.l - M.r, by0 = H - 46, passo = bw / D.meses.length;
+  D.total.forEach((v, k) => {
+    const h = 6 + 26 * v; ctx.fillStyle = k === m ? 'rgba(192,57,43,.85)' : 'rgba(41,128,185,.28)';
+    ctx.fillRect(bx0 + k * passo + 4, by0 + 30 - h, passo - 8, h);
+    ctx.fillStyle = k === m ? '#C0392B' : 'rgba(27,79,114,.6)'; ctx.font = (k === m ? 'bold ' : '') + '12px sans-serif';
+    ctx.fillText(D.nomesMeses[k], bx0 + k * passo + passo / 2 - 10, by0 + 44);
+  });
+  ctx.fillStyle = 'rgba(192,57,43,.9)';
+  ctx.beginPath(); ctx.arc(bx0 + ((pos + 0.5) % D.meses.length) * passo, by0 - 4, 5, 0, 6.283); ctx.fill();
+  requestAnimationFrame(quadro);
+}
+requestAnimationFrame(quadro);
+</script>
+"""
+
+
+def constelacao(df, temporal, altura=470):
+    """Monta o painel vivo: cada municipio e um ponto; a sazonalidade real faz os pontos respirarem."""
+    import json
+    import streamlit.components.v1 as components
+    base = df.dropna(subset=["idhm"])
+    indice = {f: k for k, f in enumerate(ORDEM)}
+    meses = sorted(temporal["mes"].dropna().unique())
+    series = []
+    for faixa in ORDEM:
+        s = temporal[temporal["faixa_idh"] == faixa].set_index("mes")["casos"].reindex(meses).fillna(0)
+        series.append([round(float(v), 4) for v in (s / s.max() if s.max() else s)])
+    total = temporal.groupby("mes")["casos"].sum().reindex(meses).fillna(0)
+    dados = {
+        "idhm": [round(float(v), 4) for v in base["idhm"]],
+        "idhmTxt": [f"{v:.3f}".replace(".", ",") for v in base["idhm"]],
+        "casos": [int(v) for v in base["casos"]],
+        "faixa": [indice.get(f, 0) for f in base["faixa_idh"]],
+        "nome": [str(n) for n in base["nome"]],
+        "cores": [CORES[f] for f in ORDEM],
+        "meses": meses, "nomesMeses": [MESES.get(m, m) for m in meses],
+        "series": series, "total": [round(float(v), 4) for v in (total / total.max())],
+    }
+    html = (CONSTELACAO_HTML.replace("__DADOS__", json.dumps(dados, ensure_ascii=False))
+            .replace("__ALTURA__", str(altura)))
+    components.html(html, height=altura + 8)
+
+
+constelacao(df, temporal)
+st.caption("Cada ponto é um município (dados reais). O relógio percorre o ano: os pontos crescem com os "
+           "casos de cada mês. Os anéis marcam as cidades com mais casos. Passe o mouse para investigar.")
+
 
 # ── PERGUNTA -> METODO -> RESULTADO ────────────────────────
 c1, c2, c3 = st.columns(3)

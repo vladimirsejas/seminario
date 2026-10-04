@@ -230,6 +230,7 @@ function fmt(n) { return Math.round(n).toString().replace(/\\B(?=(\\d{3})+(?!\\d
 let ultimoSurto = 0;
 
 function quadro(ms) {
+  if (cv.clientWidth !== W) medir();
   const t = ms / 1000;
   ctx.clearRect(0, 0, W, H);
   // o relogio do ano: 1,4 s por mes, sem parar
@@ -369,6 +370,172 @@ achado(f"<b>{quanto}</b> se concentram em municípios de IDH Alto ou "
 
 st.divider()
 
+# ── A LUPA DOS GRAFICOS (desenhada no navegador, sem internet) ──
+LUPA_HTML = """
+<div style="position:relative;border-radius:14px;overflow:hidden;background:#ffffff;
+     box-shadow:0 6px 20px rgba(0,0,0,.07);border:1px solid rgba(0,0,0,.06)">
+  <canvas id="tela" style="display:block;width:100%;height:__ALTURA__px"></canvas>
+</div>
+<!-- __NONCE__ -->
+<script>
+const C = __CONFIG__;
+const cv = document.getElementById('tela'), ctx = cv.getContext('2d');
+const base = document.createElement('canvas'), bx = base.getContext('2d');
+let W = 0, H = __ALTURA__, dpr = Math.min(window.devicePixelRatio || 1, 2);
+function medir() {
+  W = cv.clientWidth;
+  for (const c of [cv, base]) { c.width = W * dpr; c.height = H * dpr; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); bx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+medir(); window.addEventListener('resize', medir);
+let mouse = null, tempoMouse = -99, inicio = null;
+cv.addEventListener('mousemove', e => { const r = cv.getBoundingClientRect(); mouse = {x: e.clientX - r.left, y: e.clientY - r.top}; tempoMouse = performance.now() / 1000; });
+cv.addEventListener('mouseleave', () => { mouse = null; });
+function fmt(n) { return Math.round(n).toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.'); }
+function curto(n) { return n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',') + ' mi' : n >= 1e3 ? Math.round(n / 1e3) + ' mil' : fmt(n); }
+function rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+const lente = {x: -200, y: -200};
+const N = C.tipo === 'barras' ? C.itens.length : C.meses.length;
+
+// ---------- geometria de cada tipo de grafico ----------
+function geoBarras() {
+  bx.font = '14px sans-serif';
+  const esq = 16 + Math.max(...C.itens.map(i => bx.measureText(i.rotulo).width)), dir = 110;
+  const top = 14, alt = (H - top - 14) / N;
+  return {esq, dir, top, alt, larg: W - esq - dir - 10};
+}
+function geoLinhas() { return {l: 62, r: 22, t: 40, b: 40}; }
+
+function desenharBarras(p, alvo) {
+  const g = geoBarras(), max = Math.max(...C.itens.map(i => i.valor));
+  C.itens.forEach((it, k) => {
+    const y = g.top + k * g.alt, h = Math.min(34, g.alt * 0.66), yc = y + g.alt / 2;
+    const w = g.larg * (it.valor / max) * p;
+    if (k === alvo) { bx.fillStyle = rgba(it.cor, 0.10); bx.fillRect(4, y + 2, W - 8, g.alt - 4); }
+    bx.fillStyle = '#34495e'; bx.font = (k === alvo ? 'bold ' : '') + '14px sans-serif'; bx.textAlign = 'right';
+    bx.fillText(it.rotulo, g.esq - 8, yc + 5); bx.textAlign = 'left';
+    bx.fillStyle = it.cor; bx.beginPath(); bx.roundRect(g.esq, yc - h / 2, Math.max(w, 2), h, 6); bx.fill();
+    bx.fillStyle = '#1b2631'; bx.font = 'bold 14px sans-serif';
+    bx.fillText(fmt(it.valor * p), g.esq + w + 8, yc + 5);
+  });
+}
+function desenharLinhas(p, alvo) {
+  const g = geoLinhas(), max = Math.max(...C.series.flatMap(s => s.valores)) * 1.12;
+  const X = k => g.l + (W - g.l - g.r) * (k / (N - 1)), Y = v => H - g.b - (H - g.t - g.b) * (v / max);
+  bx.font = '12px sans-serif';
+  for (let q = 0; q <= 4; q++) {
+    const v = max * q / 4, y = Y(v);
+    bx.strokeStyle = 'rgba(0,0,0,.07)'; bx.beginPath(); bx.moveTo(g.l, y); bx.lineTo(W - g.r, y); bx.stroke();
+    bx.fillStyle = '#7f8c8d'; bx.textAlign = 'right'; bx.fillText(curto(v), g.l - 8, y + 4);
+  }
+  bx.textAlign = 'center';
+  C.meses.forEach((m, k) => { bx.fillStyle = k === alvo ? '#C0392B' : '#7f8c8d'; bx.font = (k === alvo ? 'bold ' : '') + '13px sans-serif'; bx.fillText(m, X(k), H - g.b + 22); });
+  bx.textAlign = 'left';
+  if (alvo >= 0) { bx.fillStyle = 'rgba(41,128,185,.08)'; const w = (W - g.l - g.r) / (N - 1); bx.fillRect(X(alvo) - w / 2, g.t - 10, w, H - g.t - g.b + 10); }
+  const ate = p * (N - 1);
+  C.series.forEach((s, j) => {
+    bx.strokeStyle = s.cor; bx.lineWidth = 3; bx.beginPath();
+    for (let k = 0; k <= Math.ceil(ate); k++) {
+      const kk = Math.min(k, ate), k0 = Math.floor(kk), f = kk - k0;
+      const v = s.valores[k0] + (s.valores[Math.min(k0 + 1, N - 1)] - s.valores[k0]) * f;
+      const x = g.l + (W - g.l - g.r) * (kk / (N - 1));
+      k === 0 ? bx.moveTo(x, Y(v)) : bx.lineTo(x, Y(v));
+    }
+    bx.stroke();
+    for (let k = 0; k <= Math.floor(ate); k++) { bx.fillStyle = s.cor; bx.beginPath(); bx.arc(X(k), Y(s.valores[k]), k === alvo ? 6 : 4, 0, 6.283); bx.fill(); }
+    bx.fillStyle = s.cor; bx.fillRect(g.l + j * 110, 12, 14, 4); bx.fillStyle = '#34495e'; bx.font = '13px sans-serif'; bx.fillText(s.nome, g.l + 20 + j * 110, 18);
+  });
+  bx.lineWidth = 1;
+}
+// onde fica cada item (para a lupa saber o que esta embaixo dela)
+function posItem(k) {
+  if (C.tipo === 'barras') { const g = geoBarras(), max = Math.max(...C.itens.map(i => i.valor));
+    return {x: g.esq + g.larg * (C.itens[k].valor / max) * 0.92, y: g.top + (k + 0.5) * g.alt}; }
+  const g = geoLinhas(), max = Math.max(...C.series.flatMap(s => s.valores)) * 1.12;
+  const v = Math.max(...C.series.map(s => s.valores[k]));
+  return {x: g.l + (W - g.l - g.r) * (k / (N - 1)), y: H - g.b - (H - g.t - g.b) * (v / max)};
+}
+function itemSob(x, y) {
+  if (C.tipo === 'barras') { const g = geoBarras(); return Math.max(0, Math.min(N - 1, Math.floor((y - g.top) / g.alt))); }
+  const g = geoLinhas(); return Math.max(0, Math.min(N - 1, Math.round((x - g.l) / ((W - g.l - g.r) / (N - 1)))));
+}
+function cartao(c, lx, ly, R) {
+  ctx.font = 'bold 15px sans-serif';
+  let w = ctx.measureText(c.titulo).width;
+  ctx.font = '13px sans-serif';
+  for (const [a, b] of c.linhas) w = Math.max(w, ctx.measureText(a + '   ' + b).width + 18);
+  w += 28; const h = 38 + c.linhas.length * 21;
+  let x = lx + R + 22; if (x + w > W - 6) x = lx - R - 22 - w; x = Math.max(6, x);
+  const y = Math.max(6, Math.min(ly - h / 2, H - h - 6));
+  ctx.shadowColor = 'rgba(0,0,0,.18)'; ctx.shadowBlur = 16;
+  ctx.fillStyle = 'rgba(255,255,255,.97)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 12); ctx.fill();
+  ctx.shadowBlur = 0; ctx.strokeStyle = c.cor; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = c.cor; ctx.fillRect(x, y + 10, 4, h - 20);
+  ctx.fillStyle = '#1b2631'; ctx.font = 'bold 15px sans-serif'; ctx.fillText(c.titulo, x + 14, y + 24);
+  c.linhas.forEach(([a, b, cor], k) => {
+    const yy = y + 46 + k * 21;
+    let xx = x + 14;
+    if (cor) { ctx.fillStyle = cor; ctx.beginPath(); ctx.arc(xx + 4, yy - 4, 4, 0, 6.283); ctx.fill(); xx += 14; }
+    ctx.fillStyle = '#5d6d7e'; ctx.font = '13px sans-serif'; ctx.fillText(a, xx, yy);
+    ctx.fillStyle = '#1b2631'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'right'; ctx.fillText(b, x + w - 14, yy); ctx.textAlign = 'left';
+  });
+}
+
+function quadro(ms) {
+  if (cv.clientWidth !== W) medir();          // a aba estava escondida (largura zero): recalcula ao aparecer
+  if (W === 0) { requestAnimationFrame(quadro); return; }
+  const t = ms / 1000; if (inicio === null) inicio = t;
+  const p = C.animar ? Math.min(1, 1 - Math.pow(1 - (t - inicio) / 1.6, 3)) : 1;   // abertura: cresce/desenha
+  const auto = !mouse || t - tempoMouse > 5;
+  let alvoPos;
+  if (auto) { const k = Math.floor(t / 2.6) % N; alvoPos = posItem(k); }       // a lupa passeia sozinha
+  else alvoPos = mouse;
+  lente.x += (alvoPos.x - lente.x) * (auto ? 0.06 : 0.35);
+  lente.y += (alvoPos.y - lente.y) * (auto ? 0.06 : 0.35);
+  lente.y = Math.min(Math.max(lente.y, 58), H - 58);           // a lupa nunca sai pela borda
+  const alvo = (p >= 1 || !C.animar) ? itemSob(lente.x, lente.y) : -1;
+  bx.clearRect(0, 0, W, H);
+  C.tipo === 'barras' ? desenharBarras(p, alvo) : desenharLinhas(p, alvo);
+  ctx.clearRect(0, 0, W, H); ctx.drawImage(base, 0, 0, W, H);
+  if (alvo >= 0) {
+    const R = 62, Z = 1.8;
+    ctx.save(); ctx.beginPath(); ctx.arc(lente.x, lente.y, R, 0, 6.283); ctx.clip();
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(lente.x - R, lente.y - R, 2 * R, 2 * R);
+    ctx.drawImage(base, (lente.x - R / Z) * dpr, (lente.y - R / Z) * dpr, (2 * R / Z) * dpr, (2 * R / Z) * dpr,
+                  lente.x - R, lente.y - R, 2 * R, 2 * R);                     // a ampliacao de verdade
+    ctx.restore();
+    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(lente.x, lente.y, R, 0, 6.283); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(lente.x, lente.y, R - 4, 3.6, 4.6); ctx.stroke();
+    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath();
+    ctx.moveTo(lente.x + R * 0.71, lente.y + R * 0.71); ctx.lineTo(lente.x + R * 1.25, lente.y + R * 1.25); ctx.stroke();   // o cabo
+    ctx.lineCap = 'butt'; ctx.lineWidth = 1;
+    cartao(C.cartoes[alvo], lente.x, lente.y, R);
+  }
+  requestAnimationFrame(quadro);
+}
+requestAnimationFrame(quadro);
+</script>
+"""
+
+
+def lupa(config, altura, nonce=0):
+    """Desenha um grafico com lupa (barras ou linhas). config vem pronto do Python."""
+    import json
+    import streamlit.components.v1 as components
+    html = (LUPA_HTML.replace("__CONFIG__", json.dumps(config, ensure_ascii=False))
+            .replace("__ALTURA__", str(altura)).replace("__NONCE__", str(nonce)))
+    components.html(html, height=altura + 6)
+
+
+
+def dec(v, casas=3):
+    return f"{v:.{casas}f}".replace(".", ",")
+
+
+if not ja_contou:
+    st.session_state["abertura"] = st.session_state.get("abertura", 0) + 1   # faz os graficos animarem de novo
+NONCE = st.session_state.get("abertura", 0)
+
 tab1, tab2, tab3, tab4 = st.tabs(["📊 Visão Geral", "🗺️ Municípios", "🔬 Clustering", "⚠️ Outliers"])
 
 # ── ABA 1: VISAO GERAL ─────────────────────────────────────
@@ -377,59 +544,50 @@ with tab1:
 
     with col_a:
         st.subheader("Casos por Faixa de IDH")
-        por_faixa = df.groupby("faixa_idh")["casos"].sum().reindex(ORDEM).dropna()
-
-        def barras(fracao=1.0):
-            valores = por_faixa.values * fracao
-            fig = go.Figure(go.Bar(
-                x=valores, y=por_faixa.index, orientation="h",
-                marker=dict(color=[CORES[f] for f in por_faixa.index], line=dict(width=0)),
-                text=[br(v) for v in valores], textposition="outside",
-                customdata=por_faixa.values / total * 100,
-                hovertemplate="<b>IDH %{y}</b><br>%{x:,.0f} casos<br>%{customdata:.1f}% do total<extra></extra>"))
-            fig.update_xaxes(range=[0, por_faixa.max() * 1.25], showgrid=True, gridcolor="rgba(0,0,0,.08)")
-            fig.update_yaxes(type="category")
-            return estilo(fig).update_layout(showlegend=False)
-
-        lugar_barras = st.empty()
-        mostrar(barras(1.0 if ja_contou else 0.0), lugar_barras, key="barras_inicio")
-        lider = por_faixa.idxmax()
-        st.caption(f"Passe o mouse nas barras. A faixa com mais casos é **{lider}** "
-                   f"({br(por_faixa.max() / total * 100, 1)}% do total).")
+        itens, cartoes = [], []
+        for faixa in ORDEM[::-1]:                                   # Muito Alto em cima
+            sub = df[df["faixa_idh"] == faixa]
+            if sub.empty:
+                continue
+            casos = sub["casos"].sum()
+            linhas_cartao = [["Casos", br(casos)], ["% do total", br(casos / total * 100, 1) + "%"],
+                             ["Municípios", br(len(sub))], ["Média por município", br(casos / len(sub))],
+                             ["IDHM médio", dec(sub["idhm"].mean())],
+                             ["Mulheres", br(sub["casos_f"].sum() / casos * 100, 1) + "%"],
+                             ["Idade média", br((sub["idade_media"] * sub["casos"]).sum() / casos, 1) + " anos"]]
+            for pos, (_, cidade) in enumerate(sub.nlargest(3, "casos").iterrows(), start=1):
+                linhas_cartao.append([f"{pos}º  {cidade['nome']}", br(cidade["casos"])])
+            itens.append({"rotulo": faixa, "valor": int(casos), "cor": CORES[faixa]})
+            cartoes.append({"titulo": f"IDH {faixa}", "cor": CORES[faixa], "linhas": linhas_cartao})
+        lupa({"tipo": "barras", "itens": itens, "cartoes": cartoes, "animar": not ja_contou}, 430, NONCE)
+        lider = max(itens, key=lambda i: i["valor"])
+        st.caption(f"🔍 Passe a lupa sobre uma barra (sem mouse, ela passeia sozinha). "
+                   f"A faixa com mais casos é **{lider['rotulo']}** ({br(lider['valor'] / total * 100, 1)}% do total).")
 
     with col_b:
         st.subheader("Sazonalidade por Faixa de IDH")
         meses = sorted(temporal["mes"].dropna().unique())
         nomes_meses = [MESES.get(m, m) for m in meses]
-        series = {f: temporal[temporal["faixa_idh"] == f].set_index("mes")["casos"].reindex(meses)
+        series = {f: temporal[temporal["faixa_idh"] == f].set_index("mes")["casos"].reindex(meses).fillna(0)
                   for f in ORDEM if f in set(temporal["faixa_idh"])}
-
-        def linhas(ate):
-            return [go.Scatter(x=nomes_meses[:ate], y=s.values[:ate], name=f, mode="lines+markers",
-                               line=dict(color=CORES[f], width=3), marker=dict(size=8),
-                               hovertemplate=f"<b>{f}</b><br>%{{x}}: %{{y:,.0f}} casos<extra></extra>")
-                    for f, s in series.items()]
-
-        maior = max(s.max() for s in series.values())
-
-        def sazonalidade(ate):
-            fig = go.Figure(data=linhas(ate),
-                            frames=[go.Frame(data=linhas(k), name=str(k)) for k in range(1, len(meses) + 1)])
-            fig.update_xaxes(categoryorder="array", categoryarray=nomes_meses, range=[-0.5, len(meses) - 0.5])
-            fig.update_yaxes(range=[0, maior * 1.12], gridcolor="rgba(0,0,0,.08)")
-            fig.update_layout(hovermode="x unified", legend=dict(orientation="h", y=1.12),
-                              updatemenus=[dict(type="buttons", x=0, y=-0.12, xanchor="left", showactive=False,
-                                                buttons=[dict(label="▶  Animar o ano", method="animate",
-                                                              args=[None, dict(frame=dict(duration=260, redraw=True),
-                                                                               transition=dict(duration=200),
-                                                                               fromcurrent=False, mode="immediate")])])])
-            return estilo(fig, 450)
-
-        lugar_linhas = st.empty()
-        mostrar(sazonalidade(len(meses) if ja_contou else 1), lugar_linhas, key="linhas_inicio")
-        pico = pico_geral
-        st.caption(f"Aperte **▶ Animar o ano** e veja a epidemia crescer. O pico acontece em "
-                   f"**{MESES.get(pico, pico)}**.")
+        total_mes = sum(series.values())
+        ranking = total_mes.rank(ascending=False, method="min")
+        cartoes = []
+        for k, m in enumerate(meses):
+            linhas_cartao = [["Total do mês", br(total_mes[m])]]
+            linhas_cartao += [[f, br(s[m]), CORES[f]] for f, s in series.items()]
+            if k:
+                anterior = total_mes[meses[k - 1]]
+                variacao = (total_mes[m] - anterior) / anterior * 100 if anterior else 0
+                linhas_cartao.append(["vs. mês anterior", ("+" if variacao >= 0 else "") + br(variacao, 1) + "%"])
+            linhas_cartao.append(["% do ano", br(total_mes[m] / total_mes.sum() * 100, 1) + "%"])
+            linhas_cartao.append(["Posição no ano", f"{int(ranking[m])}º de {len(meses)}"])
+            cartoes.append({"titulo": MESES.get(m, m) + " de 2024", "cor": "#C0392B", "linhas": linhas_cartao})
+        lupa({"tipo": "linhas", "meses": nomes_meses, "animar": not ja_contou, "cartoes": cartoes,
+              "series": [{"nome": f, "cor": CORES[f], "valores": [int(v) for v in s.values]} for f, s in series.items()]},
+             430, NONCE)
+        st.caption(f"🔍 Passe a lupa sobre um mês para ver o detalhe. O pico acontece em "
+                   f"**{MESES.get(pico_geral, pico_geral)}**.")
 
 # ── ABA 2: MUNICIPIOS ──────────────────────────────────────
 with tab2:
@@ -438,15 +596,20 @@ with tab2:
     n_top = st.slider("Quantidade de municípios", 5, 30, 10)
 
     top = df[df["faixa_idh"] == faixa_sel].nlargest(n_top, "casos").iloc[::-1]
-    fig = go.Figure(go.Bar(
-        x=top["casos"], y=top["nome"], orientation="h", marker_color=CORES[faixa_sel],
-        text=[br(v) for v in top["casos"]], textposition="outside",
-        customdata=np.column_stack([top["idhm"], top["pct_feminino"], top["idade_media"]]),
-        hovertemplate=("<b>%{y}</b><br>%{x:,.0f} casos<br>IDHM %{customdata[0]:.3f}<br>"
-                       "%{customdata[1]:.1f}% mulheres · idade média %{customdata[2]:.1f}<extra></extra>")))
-    fig.update_xaxes(range=[0, top["casos"].max() * 1.2], gridcolor="rgba(0,0,0,.08)")
-    fig.update_yaxes(type="category")
-    mostrar(estilo(fig, max(320, 34 * len(top))).update_layout(showlegend=False))
+    posicao_brasil = df["casos"].rank(ascending=False, method="min")
+    casos_faixa = df.loc[df["faixa_idh"] == faixa_sel, "casos"].sum()
+    ordem_top = top.iloc[::-1]                                       # o maior em cima
+    lupa({"tipo": "barras", "animar": True,
+          "itens": [{"rotulo": c["nome"], "valor": int(c["casos"]), "cor": CORES[faixa_sel]} for _, c in ordem_top.iterrows()],
+          "cartoes": [{"titulo": c["nome"], "cor": CORES[faixa_sel], "linhas": [
+              ["Posição no Brasil", f"{int(posicao_brasil[i])}º de {br(len(df))}"],
+              ["Casos", br(c["casos"])],
+              [f"% da faixa {faixa_sel}", br(c["casos"] / casos_faixa * 100, 1) + "%"],
+              ["IDHM", dec(c["idhm"])],
+              ["Mulheres", br(c["pct_feminino"], 1) + "%"],
+              ["Idade média", br(c["idade_media"], 1) + " anos"]]} for i, c in ordem_top.iterrows()]},
+         max(330, 40 * len(top)), f"{faixa_sel}-{n_top}")
+    st.caption("🔍 Passe a lupa sobre uma cidade para ver a ficha completa.")
 
     tabela = top.iloc[::-1][["nome", "idhm", "casos", "pct_feminino", "idade_media"]]
     tabela.columns = ["Município", "IDHM", "Casos", "% Feminino", "Idade Média"]
@@ -482,9 +645,12 @@ def grafico_grupos(base, grupos=None, centros=None, titulo=""):
             sub = base[grupos == k]
             fig.add_trace(go.Scatter(x=sub["idhm"], y=sub["casos"], mode="markers", name=f"Grupo {k + 1}",
                                        marker=dict(color=CORES_GRUPOS[k], size=7, opacity=0.8),
-                                       text=sub["nome"],
-                                       hovertemplate=f"<b>%{{text}}</b><br>Grupo {k + 1}<br>IDHM %{{x:.3f}}"
-                                                     "<br>%{y:,.0f} casos<extra></extra>"))
+                                       text=sub["nome"], customdata=np.column_stack(
+                                           [sub["pct_feminino"], sub["idade_media"], sub["casos"] / base["casos"].mean()]),
+                                       hovertemplate=f"<b>%{{text}}</b><br>Grupo {k + 1} ({len(sub)} municípios)"
+                                                     "<br>IDHM %{x:.3f}<br>%{y:,.0f} casos (%{customdata[2]:.1f}× a média)"
+                                                     "<br>%{customdata[0]:.1f}% mulheres · idade média %{customdata[1]:.1f}"
+                                                     "<extra></extra>"))
         if centros is not None:
             fig.add_trace(go.Scatter(x=centros[:, 0], y=np.maximum(centros[:, 1], 1), mode="markers",
                                      name="Centros", hoverinfo="skip",
@@ -579,9 +745,13 @@ def grafico_outliers(base, achados, limite, titulo):
     if len(achados):
         fig.add_trace(go.Scatter(x=achados["idhm"], y=achados["casos"], mode="markers", name="Fora do padrão",
                                  marker=dict(color="#E74C3C", size=14, line=dict(width=2, color="#7B241C")),
-                                 text=achados["nome"], customdata=achados["z_casos"],
-                                 hovertemplate="<b>%{text}</b><br>IDHM %{x:.3f}<br>%{y:,.0f} casos"
-                                               "<br>Z-score %{customdata:.1f}<extra></extra>"))
+                                 text=achados["nome"], customdata=list(zip(            # numeros e texto juntos, cada um no seu tipo
+                                     achados["z_casos"].astype(float), (achados["casos"] / base["casos"].mean()).astype(float),
+                                     achados["faixa_idh"].astype(str),
+                                     achados["casos"].rank(ascending=False, method="min").astype(int))),
+                                 hovertemplate="<b>%{text}</b> · IDH %{customdata[2]}<br>IDHM %{x:.3f}<br>%{y:,.0f} casos"
+                                               "<br>Z-score %{customdata[0]:.1f} · %{customdata[1]:.1f}× a média"
+                                               "<br>%{customdata[3]}º entre os fora do padrão<extra></extra>"))
         for i, (_, linha) in enumerate(achados.head(5).iterrows()):      # os 5 maiores, com setas desencontradas
             fig.add_annotation(x=linha["idhm"], y=np.log10(linha["casos"]), text=linha["nome"],
                                showarrow=True, arrowcolor="#7B241C", font=dict(color="#7B241C", size=13),
@@ -655,9 +825,5 @@ if not ja_contou:
         fracao = 1 - (1 - passo / passos_contagem) ** 3          # comeca rapido e freia no final
         for lugar, (rotulo, valor, formato) in zip(lugares, NUMEROS):
             lugar.metric(rotulo, formato(valor * fracao))
-        if passo % 3 == 0 or passo == passos_contagem:            # os graficos a cada 3 passos (mais leve)
-            mostrar(barras(fracao), lugar_barras, key=f"barras_{passo}")      # cada quadro com nome unico
-            mostrar(sazonalidade(max(1, round(len(meses) * passo / passos_contagem))), lugar_linhas,
-                    key=f"linhas_{passo}")
         time.sleep(0.05)
     st.session_state["ja_contou"] = True

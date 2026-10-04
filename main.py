@@ -32,7 +32,7 @@ def main():
     print("\n>>> Etapa 4 - Iniciando dashboard...")
     print("    Abrindo no navegador em http://localhost:8501")
     print("    Pressione Ctrl+C para encerrar.\n")
-    os.system("streamlit run dashboard.py")
+    subprocess.run([PYTHON, "-m", "streamlit", "run", "dashboard.py"])   # pelo python.exe: o Windows bloqueia o streamlit.exe
 
 if __name__ == "__main__":
     main()
